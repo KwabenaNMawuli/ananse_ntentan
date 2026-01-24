@@ -1,0 +1,406 @@
+.comic-viewer {
+  min-height: calc(100vh - 80px);
+  background: linear-gradient(135deg, #0a1e28 0%, #0d2832 50%, #0a1e28 100%);
+  padding: 3rem 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.comic-container {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* Header Badge */
+.transmission-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 20px;
+  color: #00ffff;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+
+.badge-icon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Title Section */
+.comic-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.comic-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+  letter-spacing: 1px;
+}
+
+.comic-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.author-highlight {
+  color: #00ffff;
+  font-weight: 600;
+}
+
+/* Comic Panels */
+.comic-panels {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.panel {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 255, 255, 0.2);
+}
+
+.panel-large {
+  height: 400px;
+}
+
+.panel-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+/* Panel 1 - Cityscape */
+.panel-image.cityscape {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6)),
+              url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400"><rect fill="%230a0e1a" width="800" height="400"/><rect fill="%23ff3366" x="100" y="50" width="60" height="300" opacity="0.8"/><rect fill="%2300ffff" x="200" y="100" width="50" height="250" opacity="0.6"/><rect fill="%23ff6633" x="300" y="80" width="70" height="270" opacity="0.7"/><rect fill="%236633ff" x="420" y="120" width="55" height="230" opacity="0.6"/><rect fill="%23ff3366" x="520" y="60" width="65" height="290" opacity="0.8"/><rect fill="%2300ffff" x="620" y="90" width="50" height="260" opacity="0.7"/></svg>');
+  background-size: cover;
+}
+
+.panel-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+}
+
+.panel-quote {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-style: italic;
+  line-height: 1.6;
+  border-left: 3px solid #00ffff;
+  padding-left: 1rem;
+}
+
+/* Panel 2 - Eye */
+.panel-image.eye {
+  background: linear-gradient(135deg, #1a2530 0%, #2a3540 100%),
+              radial-gradient(circle at center, #ff9933 0%, #cc6600 30%, #1a2530 70%);
+  background-blend-mode: overlay;
+}
+
+.system-alert {
+  background: rgba(0, 255, 255, 0.1);
+  border: 2px solid #00ffff;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  backdrop-filter: blur(10px);
+  max-width: 400px;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.alert-header {
+  color: #00ffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 0.75rem;
+}
+
+.alert-text {
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Panel 3 - Synchronizing */
+.panel-image.sync {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9)),
+              repeating-linear-gradient(
+                90deg,
+                rgba(0, 255, 255, 0.1) 0px,
+                rgba(0, 255, 255, 0.3) 2px,
+                transparent 2px,
+                transparent 20px
+              );
+  background-color: #0a1520;
+}
+
+.sync-overlay {
+  text-align: center;
+  padding: 2rem;
+}
+
+.sync-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #00ffff;
+  margin-bottom: 1rem;
+  letter-spacing: 8px;
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { text-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+  50% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+}
+
+.sync-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+/* Panel 4 - Portal */
+.panel-image.portal {
+  background: radial-gradient(circle at center, 
+              #ff9933 0%, 
+              #ff6600 20%, 
+              #cc3300 40%, 
+              #0a1520 70%);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-image.portal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center,
+              transparent 30%,
+              rgba(0, 255, 255, 0.3) 60%,
+              rgba(0, 255, 255, 0.5) 80%);
+  animation: rotate 20s linear infinite;
+}
+
+.portal-overlay {
+  text-align: center;
+  z-index: 1;
+  position: relative;
+}
+
+.portal-text {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.portal-subtext {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Action Buttons */
+.comic-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: #00ffff;
+  color: #0a1e28;
+}
+
+.btn-primary:hover {
+  background: #00e5e5;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+  border: 2px solid #00ffff;
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Return Link */
+.return-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.return-link:hover {
+  color: #00ffff;
+  gap: 0.75rem;
+}
+
+.return-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Stats Section */
+.comic-stats {
+  display: flex;
+  gap: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+.stat-item:hover {
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.05);
+}
+
+.stat-item.liked {
+  color: #ff3366;
+}
+
+.stat-item.liked .stat-icon {
+  fill: #ff3366;
+  stroke: #ff3366;
+}
+
+.stat-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.stat-count {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .comic-viewer {
+    padding: 2rem 1rem;
+  }
+
+  .comic-title {
+    font-size: 2rem;
+  }
+
+  .comic-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .panel-large {
+    height: 300px;
+  }
+
+  .comic-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .comic-stats {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .comic-title {
+    font-size: 1.5rem;
+  }
+
+  .panel-large {
+    height: 250px;
+  }
+
+  .sync-title {
+    font-size: 1.8rem;
+    letter-spacing: 4px;
+  }
+}
