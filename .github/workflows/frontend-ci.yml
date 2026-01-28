@@ -1,0 +1,197 @@
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'ananse_ntentan_frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'ananse_ntentan_frontend/**'
+
+jobs:
+  # Job 1: Run tests and linting
+  test:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: ananse_ntentan_frontend/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./ananse_ntentan_frontend
+      run: npm ci
+      
+    - name: Run linter
+      working-directory: ./ananse_ntentan_frontend
+      run: npm run lint --if-present || echo "No lint script found"
+      continue-on-error: true
+      
+    - name: Run tests
+      working-directory: ./ananse_ntentan_frontend
+      run: npm test -- --coverage --watchAll=false
+      env:
+        CI: true
+        
+    - name: Upload coverage reports
+      if: matrix.node-version == '20.x'
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./ananse_ntentan_frontend/coverage
+        flags: frontend
+        name: frontend-coverage
+
+  # Job 2: Build the application
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: ananse_ntentan_frontend/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./ananse_ntentan_frontend
+      run: npm ci
+      
+    - name: Build application
+      working-directory: ./ananse_ntentan_frontend
+      run: npm run build
+      env:
+        CI: false # Treats warnings as warnings, not errors
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: ananse_ntentan_frontend/build/
+        retention-days: 7
+
+  # Job 3: Security audit
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: Run security audit
+      working-directory: ./ananse_ntentan_frontend
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+      
+    - name: Check for dependency vulnerabilities
+      working-directory: ./ananse_ntentan_frontend
+      run: npx audit-ci --moderate
+      continue-on-error: true
+
+  # Job 4: Deploy to staging (only on develop branch)
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: ./build
+        
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # Examples:
+        # - Deploy to Netlify: npx netlify-cli deploy --prod --dir=build
+        # - Deploy to Vercel: npx vercel --prod
+        # - Deploy to AWS S3: aws s3 sync ./build s3://your-staging-bucket
+        echo "✅ Staging deployment complete!"
+        
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ Frontend deployed to staging! Preview: [Staging URL]'
+          })
+
+  # Job 5: Deploy to production (only on main branch)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, build, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://your-production-url.com
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: ./build
+        
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        # Add your production deployment commands here
+        # Examples:
+        # - Deploy to Netlify: npx netlify-cli deploy --prod --dir=build --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
+        # - Deploy to Vercel: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+        # - Deploy to AWS S3: aws s3 sync ./build s3://your-production-bucket
+        echo "✅ Production deployment complete!"
+        
+    - name: Create deployment notification
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: context.payload.deployment.id,
+            state: 'success',
+            description: 'Frontend deployed to production',
+            environment_url: 'https://your-production-url.com'
+          })
