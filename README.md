@@ -325,15 +325,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Contact & Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/YOUR_USERNAME/ananse-ntentan/issues)
-- **Email**: your.email@example.com
-- **Twitter**: [@your_handle](https://twitter.com/your_handle)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/KwabenaNMawuli/ananse-ntentan/issues)
+- **Email**: knyamekyemawuli@example.com
+
 
 ---
 
 ## 🌐 Links
 
-- **Live Demo**: https://ananse-ntentan.vercel.app
+- **Live Demo**: 
 - **API Documentation**: See [BACKEND_FEATURES.md](./BACKEND_FEATURES.md)
 - **Frontend Docs**: See [FRONTEND_FEATURES.md](./FRONTEND_FEATURES.md)
 - **Deployment Guide**: See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
