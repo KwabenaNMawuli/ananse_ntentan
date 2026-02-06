@@ -292,4 +292,4 @@ This will run all tests in your project and show you the results!
 
 ---
 
-**Need help?** Check the [React Testing Library Docs](https://testing-library.com/docs/react-testing-library/intro/) or [Jest Docs](https://jestjs.io/docs/getting-started).
+
