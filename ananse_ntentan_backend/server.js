@@ -1,0 +1,239 @@
+require('dotenv').config({ quiet: true });
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const http = require('http');
+const WebSocket = require('ws');
+// const mongoSanitize = require('express-mongo-sanitize'); // Disabled - Express 5 compatibility issue
+const connectDB = require('./config/database');
+const errorHandler = require('./middleware/errorHandler');
+const ChatRoom = require('./models/ChatRoom');
+const ChatMessage = require('./models/ChatMessage');
+
+const app = express();
+const server = http.createServer(app);
+
+// Connect to MongoDB
+connectDB();
+
+// Middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(cors({ origin: process.env.FRONTEND_URL }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+// app.use(mongoSanitize()); // Disabled - Express 5 compatibility issue
+
+// Routes
+app.use('/api/stories', require('./routes/stories'));
+app.use('/api/feed', require('./routes/feed'));
+app.use('/api/styles', require('./routes/styles'));
+app.use('/api/files', require('./routes/files'));
+app.use('/api/chat', require('./routes/chat'));
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Error handling
+app.use(errorHandler);
+
+// WebSocket Setup
+const wss = new WebSocket.Server({ server });
+
+// Store active connections
+const clients = new Map(); // userId -> WebSocket
+const waitingQueue = []; // Users waiting for random match
+
+wss.on('connection', (ws) => {
+  let userId = null;
+  
+  ws.on('message', async (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      switch (data.type) {
+        case 'register':
+          userId = data.userId;
+          clients.set(userId, ws);
+          console.log(`User registered: ${userId}`);
+          break;
+          
+        case 'find_match':
+          if (data.matchType === 'random') {
+            // Check if user already in queue
+            if (waitingQueue.includes(userId)) {
+              break;
+            }
+            
+            // Try to match with someone in queue
+            if (waitingQueue.length > 0) {
+              const partnerId = waitingQueue.shift();
+              const partnerWs = clients.get(partnerId);
+              
+              if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
+                // Create room
+                const room = new ChatRoom({
+                  participants: [userId, partnerId]
+                });
+                await room.save();
+                
+                // Notify both users
+                ws.send(JSON.stringify({
+                  type: 'match_found',
+                  room: room._id.toString(),
+                  partnerId: partnerId
+                }));
+                
+                partnerWs.send(JSON.stringify({
+                  type: 'match_found',
+                  room: room._id.toString(),
+                  partnerId: userId
+                }));
+                
+                console.log(`Match created: ${userId} <-> ${partnerId}`);
+              } else {
+                // Partner disconnected, add current user to queue
+                waitingQueue.push(userId);
+              }
+            } else {
+              // Add to waiting queue
+              waitingQueue.push(userId);
+              console.log(`User ${userId} added to waiting queue`);
+            }
+          }
+          break;
+          
+        case 'send_message':
+          const { roomId, content } = data;
+          
+          // Save message to database
+          const message = new ChatMessage({
+            roomId,
+            senderId: userId,
+            content,
+            type: 'text'
+          });
+          await message.save();
+          
+          // Update room timestamp
+          await ChatRoom.findByIdAndUpdate(roomId, { updatedAt: new Date() });
+          
+          // Get room to find other participant
+          const room = await ChatRoom.findById(roomId);
+          if (room) {
+            const otherParticipant = room.participants.find(p => p !== userId);
+            const otherWs = clients.get(otherParticipant);
+            
+            if (otherWs && otherWs.readyState === WebSocket.OPEN) {
+              otherWs.send(JSON.stringify({
+                type: 'message',
+                roomId,
+                senderId: userId,
+                content,
+                timestamp: message.createdAt
+              }));
+            }
+          }
+          break;
+          
+        case 'join_room':
+          const { roomId: joinRoomId } = data;
+          
+          // Send room history
+          const messages = await ChatMessage.find({ roomId: joinRoomId })
+            .sort({ createdAt: 1 })
+            .limit(50);
+          
+          ws.send(JSON.stringify({
+            type: 'room_history',
+            roomId: joinRoomId,
+            messages: messages.map(msg => ({
+              senderId: msg.senderId,
+              content: msg.content,
+              timestamp: msg.createdAt
+            }))
+          }));
+          break;
+          
+        case 'leave_room':
+          const { roomId: leaveRoomId } = data;
+          
+          // Notify other participant
+          const leaveRoom = await ChatRoom.findById(leaveRoomId);
+          if (leaveRoom) {
+            const otherParticipant = leaveRoom.participants.find(p => p !== userId);
+            const otherWs = clients.get(otherParticipant);
+            
+            if (otherWs && otherWs.readyState === WebSocket.OPEN) {
+              otherWs.send(JSON.stringify({
+                type: 'user_disconnected',
+                roomId: leaveRoomId
+              }));
+            }
+          }
+          break;
+          
+        case 'get_rooms':
+          const rooms = await ChatRoom.find({
+            participants: userId,
+          })
+            .sort({ updatedAt: -1 })
+            .limit(20);
+          
+          const roomsWithMessages = await Promise.all(
+            rooms.map(async (room) => {
+              const lastMessage = await ChatMessage.findOne({ roomId: room._id })
+                .sort({ createdAt: -1 });
+              
+              return {
+                roomId: room._id.toString(),
+                participants: room.participants,
+                lastMessage: room.updatedAt,
+                lastMessageText: lastMessage?.content || 'No messages yet'
+              };
+            })
+          );
+          
+          ws.send(JSON.stringify({
+            type: 'rooms_list',
+            rooms: roomsWithMessages
+          }));
+          break;
+          
+        default:
+          console.log('Unknown message type:', data.type);
+      }
+    } catch (error) {
+      console.error('WebSocket error:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: error.message
+      }));
+    }
+  });
+
+  ws.on('close', () => {
+    if (userId) {
+      clients.delete(userId);
+      // Remove from waiting queue if present
+      const queueIndex = waitingQueue.indexOf(userId);
+      if (queueIndex > -1) {
+        waitingQueue.splice(queueIndex, 1);
+      }
+      console.log(`User disconnected: ${userId}`);
+    }
+  });
+
+  ws.on('error', (error) => {
+    console.error('WebSocket connection error:', error);
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`💬 WebSocket server ready`);
+});
