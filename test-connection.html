@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ananse Ntentan - Connection Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a1e28 0%, #1a3a45 50%, #0f2530 100%);
+            color: #00ffff;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+        }
+        h1 { text-align: center; letter-spacing: 4px; }
+        .test { 
+            margin: 1rem 0; 
+            padding: 1rem; 
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+        .pass { color: #00ff00; }
+        .fail { color: #ff3366; }
+        .pending { color: #ffaa00; }
+        button {
+            background: #00ffff;
+            color: #0a1e28;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        button:hover { background: #00e5e5; }
+        pre { 
+            background: #000; 
+            padding: 1rem; 
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 CONNECTION DIAGNOSTICS</h1>
+        
+        <div class="test" id="backend-test">
+            <strong>1. Backend Server:</strong> <span class="pending">Testing...</span>
+            <pre id="backend-result"></pre>
+        </div>
+        
+        <div class="test" id="styles-test">
+            <strong>2. Database Styles:</strong> <span class="pending">Testing...</span>
+            <pre id="styles-result"></pre>
+        </div>
+        
+        <div class="test" id="write-test">
+            <strong>3. Story Creation:</strong> <span class="pending">Waiting...</span>
+            <pre id="write-result"></pre>
+        </div>
+        
+        <button onclick="runTests()">RUN TESTS</button>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        
+        async function runTests() {
+            document.getElementById('backend-test').querySelector('span').className = 'pending';
+            document.getElementById('backend-test').querySelector('span').textContent = 'Testing...';
+            
+            // Test 1: Backend connection
+            try {
+                const response = await fetch(`${API_URL}/feed?page=1&limit=1`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('backend-test').querySelector('span').className = 'pass';
+                    document.getElementById('backend-test').querySelector('span').textContent = '✅ CONNECTED';
+                    document.getElementById('backend-result').textContent = JSON.stringify(data, null, 2);
+                } else {
+                    throw new Error(`Status ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('backend-test').querySelector('span').className = 'fail';
+                document.getElementById('backend-test').querySelector('span').textContent = '❌ FAILED';
+                document.getElementById('backend-result').textContent = `Error: ${error.message}\n\nMake sure backend server is running:\ncd ananse_ntentan_backend\nnpm run dev`;
+                return;
+            }
+            
+            // Test 2: Database styles
+            document.getElementById('styles-test').querySelector('span').className = 'pending';
+            document.getElementById('styles-test').querySelector('span').textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_URL}/styles/visual`);
+                const data = await response.json();
+                
+                if (response.ok && data.styles && data.styles.length > 0) {
+                    document.getElementById('styles-test').querySelector('span').className = 'pass';
+                    document.getElementById('styles-test').querySelector('span').textContent = '✅ CONNECTED';
+                    document.getElementById('styles-result').textContent = `Found ${data.styles.length} visual styles:\n${data.styles.map(s => s.name).join(', ')}`;
+                } else {
+                    throw new Error('No styles found - run seedStyles.js');
+                }
+            } catch (error) {
+                document.getElementById('styles-test').querySelector('span').className = 'fail';
+                document.getElementById('styles-test').querySelector('span').textContent = '❌ FAILED';
+                document.getElementById('styles-result').textContent = `Error: ${error.message}\n\nRun: node scripts/seedStyles.js`;
+            }
+            
+            // Test 3: Story creation
+            document.getElementById('write-test').querySelector('span').className = 'pending';
+            document.getElementById('write-test').querySelector('span').textContent = 'Testing...';
+            
+            try {
+                const testStory = {
+                    text: "A robot discovers emotions for the first time.",
+                    visualStyleId: "default",
+                    audioStyleId: "default"
+                };
+                
+                const response = await fetch(`${API_URL}/stories/write`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testStory)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.storyId) {
+                    document.getElementById('write-test').querySelector('span').className = 'pass';
+                    document.getElementById('write-test').querySelector('span').textContent = '✅ SUCCESS';
+                    document.getElementById('write-result').textContent = `Story created!\nID: ${data.storyId}\nStatus: ${data.status}\n\nCheck status at: ${API_URL}/stories/${data.storyId}/status`;
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                document.getElementById('write-test').querySelector('span').className = 'fail';
+                document.getElementById('write-test').querySelector('span').textContent = '❌ FAILED';
+                document.getElementById('write-result').textContent = `Error: ${error.message}\n\nCheck:\n1. MongoDB is connected\n2. GEMINI_API_KEY is set\n3. Backend console for errors`;
+            }
+        }
+        
+        // Auto-run on load
+        window.onload = runTests;
+    </script>
+</body>
+</html>

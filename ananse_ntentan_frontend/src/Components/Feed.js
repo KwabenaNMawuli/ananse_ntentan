@@ -183,8 +183,8 @@ const StoryCard = ({ story, apiBase }) => {
                             console.error('Failed to load image:', imageUrl);
                           }}
                         />
-                        <div className="panel-overlay" style={{ position: 'relative', zIndex: 2 }}>
-                          <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.8em' }}>PANEL {panel.number}</div>
+                        <div className="panel-overlay" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2 }}>
+                          <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.8em' }}>CAPTION:</div>
                           <p className="panel-quote" style={{ fontStyle: 'italic' }}>
                             "{panel.dialogue || panel.description}"
                           </p>
