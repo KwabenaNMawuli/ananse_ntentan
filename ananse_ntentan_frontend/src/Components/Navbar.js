@@ -13,6 +13,7 @@ const Navbar = () => {
         
         <div className="nav-right">
           <Link to="/archive" className="nav-link">MY FEED</Link>
+          <Link to="/chat" className="nav-link">VIBE</Link>
           <Link to="/about" className="nav-link">ABOUT</Link>
           <Link to="/profile" className="icon-btn" aria-label="User Profile">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

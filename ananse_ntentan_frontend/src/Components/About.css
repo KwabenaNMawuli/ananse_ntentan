@@ -49,13 +49,74 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
+.vision-section,
+.mission-section,
+.purpose-section,
+.future-section {
+  margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #00ffff;
+  margin-bottom: 1.5rem;
+  letter-spacing: 3px;
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
 .about-text {
   color: rgba(255, 255, 255, 0.85);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1.8;
-  margin-bottom: 3rem;
-  text-align: justify;
-  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
+  text-align: left;
+  letter-spacing: 0.3px;
+}
+
+.purpose-list {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.05rem;
+  line-height: 2;
+  margin: 1.5rem 0 2rem 2rem;
+  list-style: none;
+  padding: 0;
+}
+
+.purpose-list li {
+  margin-bottom: 1rem;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.purpose-list li::before {
+  content: '✦';
+  position: absolute;
+  left: 0;
+  color: #00ffff;
+  font-size: 0.8rem;
+}
+
+.purpose-list strong {
+  color: #00ffff;
+  font-weight: 600;
+}
+
+.closing-text {
+  text-align: center;
+  margin: 3rem 0 2rem;
+  padding: 2rem;
+  background: rgba(0, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.closing-text .about-text {
+  margin-bottom: 0;
+  font-size: 1.2rem;
+  color: #00ffff;
+  text-align: center;
 }
 
 .about-stats {

@@ -1,5 +1,7 @@
 # Ananse Ntentan - Frontend Features Documentation
 
+**Note**: Ananse Ntentan produces **multi-modal narratives** combining both visual (comic-style panels) and audio (AI-generated narration) outputs.
+
 ## ✅ Fully Implemented Features
 
 ### 1. Navigation System

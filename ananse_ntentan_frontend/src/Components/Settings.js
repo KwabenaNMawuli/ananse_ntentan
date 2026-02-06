@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { usePreferences } from '../context/PreferencesContext';
 import './Settings.css';
 
 const Settings = () => {
+  const navigate = useNavigate();
+  const { preferences, clearPreferences } = usePreferences();
   const [anonymousName, setAnonymousName] = useState('');
   const [savedName, setSavedName] = useState('VoidWanderer');
   const [isEditing, setIsEditing] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleSave = () => {
     if (anonymousName.trim()) {
@@ -23,6 +28,33 @@ const Settings = () => {
   const handleCancel = () => {
     setAnonymousName('');
     setIsEditing(false);
+  };
+
+  const handleRetakeQuiz = () => {
+    clearPreferences();
+    navigate('/quiz');
+  };
+
+  const handleResetPreferences = () => {
+    if (showResetConfirm) {
+      clearPreferences();
+      navigate('/quiz');
+    } else {
+      setShowResetConfirm(true);
+      setTimeout(() => setShowResetConfirm(false), 3000);
+    }
+  };
+
+  // Get preference display values
+  const getPreferenceLabel = (key, value) => {
+    const labels = {
+      genre: { scifi: 'Sci-Fi', fantasy: 'Fantasy', horror: 'Horror', romance: 'Romance', adventure: 'Adventure', mystery: 'Mystery' },
+      mood: { dark: 'Dark', bright: 'Bright', mysterious: 'Mysterious', intense: 'Intense', calm: 'Calm' },
+      artStyle: { comic: 'Bold Comic', noir: 'Noir', watercolor: 'Watercolor', anime: 'Anime', realistic: 'Realistic' },
+      pacing: { fast: 'Fast', balanced: 'Balanced', detailed: 'Detailed' },
+      tone: { serious: 'Serious', whimsical: 'Whimsical', poetic: 'Poetic', gritty: 'Gritty', uplifting: 'Uplifting' }
+    };
+    return labels[key]?.[value] || value;
   };
 
   return (
@@ -89,6 +121,57 @@ const Settings = () => {
                 This name will appear on all your void transmissions. Choose wisely—the void remembers.
               </p>
             </div>
+          </div>
+
+          {/* Story Preferences Section */}
+          <div className="settings-section">
+            <div className="section-header">
+              <h2 className="section-title">STORY PREFERENCES</h2>
+              <p className="section-description">
+                Your calibrated preferences shape how the void interprets your transmissions.
+              </p>
+            </div>
+
+            {preferences && (
+              <div className="preferences-display">
+                <div className="preference-grid">
+                  <div className="preference-item">
+                    <span className="pref-label">Genre</span>
+                    <span className="pref-value">{getPreferenceLabel('genre', preferences.genre)}</span>
+                  </div>
+                  <div className="preference-item">
+                    <span className="pref-label">Mood</span>
+                    <span className="pref-value">{getPreferenceLabel('mood', preferences.mood)}</span>
+                  </div>
+                  <div className="preference-item">
+                    <span className="pref-label">Art Style</span>
+                    <span className="pref-value">{getPreferenceLabel('artStyle', preferences.artStyle)}</span>
+                  </div>
+                  <div className="preference-item">
+                    <span className="pref-label">Pacing</span>
+                    <span className="pref-value">{getPreferenceLabel('pacing', preferences.pacing)}</span>
+                  </div>
+                  <div className="preference-item">
+                    <span className="pref-label">Tone</span>
+                    <span className="pref-value">{getPreferenceLabel('tone', preferences.tone)}</span>
+                  </div>
+                </div>
+
+                <button className="btn-recalibrate" onClick={handleRetakeQuiz}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+                  </svg>
+                  Recalibrate Preferences
+                </button>
+
+                <button 
+                  className={`btn-reset ${showResetConfirm ? 'confirm' : ''}`}
+                  onClick={handleResetPreferences}
+                >
+                  {showResetConfirm ? '⚠️ Click Again to Confirm Reset' : 'Reset All Preferences'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Additional Settings Placeholder */}

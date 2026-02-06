@@ -1,13 +1,34 @@
+.feed-container {
+  min-height: calc(100vh - 80px);
+  background: linear-gradient(135deg, #0a1e28 0%, #0d2832 50%, #0a1e28 100%);
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.stories-wrapper {
+  max-width: min(900px, 100%);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  margin-bottom: 3rem;
+}
+
 .comic-viewer {
   min-height: calc(100vh - 80px);
   background: linear-gradient(135deg, #0a1e28 0%, #0d2832 50%, #0a1e28 100%);
   padding: 3rem 2rem;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
 }
 
 .comic-container {
-  max-width: 800px;
+  max-width: min(900px, 100%);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -87,18 +108,28 @@
 }
 
 .panel-large {
-  height: 400px;
+  min-height: 600px;
+  height: auto;
 }
 
 .panel-image {
   width: 100%;
   height: 100%;
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+  background-color: #1a1a1a;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-size: cover;
-  background-position: center;
-  position: relative;
+}
+
+.panel-image img {
+  width: 100%;
+  height: auto;
+  min-height: 600px;
+  object-fit: contain;
+  display: block;
 }
 
 /* Panel 1 - Cityscape */
@@ -311,6 +342,147 @@
   height: 16px;
 }
 
+/* Feed Navigation Between Story Pairs */
+.feed-navigation {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: center;
+  margin: 3rem 0 2rem;
+  width: 100%;
+}
+
+.nav-pair-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+  border: 2px solid rgba(0, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.nav-pair-button:hover:not(:disabled) {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: #00ffff;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.nav-pair-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.loading-text, .error-text {
+  color: #00ffff;
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 3rem;
+  letter-spacing: 2px;
+}
+
+.error-text {
+  color: #ff3366;
+}
+
+/* Panel Navigation Controls */
+.panel-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+}
+
+.nav-button {
+  background: rgba(0, 255, 255, 0.1);
+  border: 2px solid rgba(0, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #00ffff;
+  transition: all 0.3s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: #00ffff;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.nav-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.panel-indicators {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.panel-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.panel-indicator:hover {
+  background: rgba(0, 255, 255, 0.4);
+  border-color: #00ffff;
+  transform: scale(1.2);
+}
+
+.panel-indicator.active {
+  background: #00ffff;
+  border-color: #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  width: 14px;
+  height: 14px;
+}
+
+.panel-counter {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+}
+
+.story-panel {
+  animation: fadeInPanel 0.4s ease-out;
+}
+
+@keyframes fadeInPanel {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* Stats Section */
 .comic-stats {
   display: flex;
@@ -358,6 +530,10 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .feed-container {
+    padding: 2rem 1rem;
+  }
+
   .comic-viewer {
     padding: 2rem 1rem;
   }
@@ -371,7 +547,15 @@
   }
 
   .panel-large {
-    height: 300px;
+    min-height: 400px;
+  }
+
+  .panel-image {
+    min-height: 400px;
+  }
+
+  .panel-image img {
+    min-height: 400px;
   }
 
   .comic-actions {
@@ -396,7 +580,15 @@
   }
 
   .panel-large {
-    height: 250px;
+    min-height: 300px;
+  }
+
+  .panel-image {
+    min-height: 300px;
+  }
+
+  .panel-image img {
+    min-height: 300px;
   }
 
   .sync-title {
