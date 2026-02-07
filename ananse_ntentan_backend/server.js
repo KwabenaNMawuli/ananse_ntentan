@@ -9,6 +9,7 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const ChatRoom = require('./models/ChatRoom');
 const ChatMessage = require('./models/ChatMessage');
+const visualChatService = require('./services/visualChatService');
 
 const app = express();
 const server = http.createServer(app);
@@ -159,6 +160,99 @@ wss.on('connection', (ws) => {
                 timestamp: message.createdAt
               }));
             }
+          }
+          break;
+          
+        case 'send_visual_message':
+          // Visual chat: generate 2-5 panel story from text
+          const { roomId: visualRoomId, content: visualContent, panelCount } = data;
+          
+          try {
+            // Check daily limit
+            const limitCheck = await visualChatService.checkDailyLimit(userId);
+            if (!limitCheck.allowed) {
+              ws.send(JSON.stringify({
+                type: 'visual_limit_reached',
+                message: `Daily limit reached (${limitCheck.limit} visual messages). Try again tomorrow!`,
+                used: limitCheck.used,
+                limit: limitCheck.limit
+              }));
+              break;
+            }
+            
+            // Notify sender that generation is starting
+            ws.send(JSON.stringify({
+              type: 'visual_generating',
+              message: 'Generating your visual story...',
+              remaining: limitCheck.remaining - 1
+            }));
+            
+            // Create pending message
+            const visualMessage = new ChatMessage({
+              roomId: visualRoomId,
+              senderId: userId,
+              content: visualContent,
+              type: 'visual',
+              visualStatus: 'generating',
+              panels: []
+            });
+            await visualMessage.save();
+            
+            // Generate visual story (async)
+            const visualData = await visualChatService.processVisualMessage(
+              visualContent, 
+              panelCount || 3
+            );
+            
+            // Update message with panels
+            visualMessage.panels = visualData.panels;
+            visualMessage.visualStatus = 'complete';
+            await visualMessage.save();
+            
+            // Update room timestamp
+            await ChatRoom.findByIdAndUpdate(visualRoomId, { updatedAt: new Date() });
+            
+            // Get room to find other participant
+            const visualRoom = await ChatRoom.findById(visualRoomId);
+            
+            const visualMessageData = {
+              type: 'visual_message',
+              roomId: visualRoomId,
+              messageId: visualMessage._id.toString(),
+              senderId: userId,
+              content: visualContent,
+              title: visualData.title,
+              panels: visualData.panels.map(p => ({
+                number: p.number,
+                description: p.description,
+                dialogue: p.dialogue,
+                scene: p.scene,
+                imageFileId: p.imageFileId?.toString()
+              })),
+              timestamp: visualMessage.createdAt
+            };
+            
+            // Send to sender
+            ws.send(JSON.stringify(visualMessageData));
+            
+            // Send to other participant
+            if (visualRoom) {
+              const otherParticipant = visualRoom.participants.find(p => p !== userId);
+              const otherWs = clients.get(otherParticipant);
+              
+              if (otherWs && otherWs.readyState === WebSocket.OPEN) {
+                otherWs.send(JSON.stringify(visualMessageData));
+              }
+            }
+            
+            console.log(`✅ Visual message sent: ${visualData.title} (${visualData.panels.length} panels)`);
+          } catch (error) {
+            console.error('Visual message error:', error);
+            ws.send(JSON.stringify({
+              type: 'visual_error',
+              message: 'Failed to generate visual story. Please try again.',
+              error: error.message
+            }));
           }
           break;
           

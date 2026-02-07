@@ -17,12 +17,22 @@ const chatMessageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['text', 'system'],
+    enum: ['text', 'system', 'visual'],
     default: 'text'
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  // For visual messages: array of 2-5 panels
+  panels: [{
+    number: { type: Number },
+    description: { type: String },
+    dialogue: { type: String },
+    scene: { type: String },
+    imageFileId: { type: mongoose.Schema.Types.ObjectId }
+  }],
+  // Track visual message status
+  visualStatus: {
+    type: String,
+    enum: ['pending', 'generating', 'complete', 'failed'],
+    default: 'pending'
   },
   read: {
     type: Boolean,
@@ -35,5 +45,7 @@ const chatMessageSchema = new mongoose.Schema({
 // Index for faster queries
 chatMessageSchema.index({ roomId: 1, createdAt: -1 });
 chatMessageSchema.index({ senderId: 1 });
+chatMessageSchema.index({ senderId: 1, type: 1, createdAt: 1 }); // For daily limit queries
 
 module.exports = mongoose.model('ChatMessage', chatMessageSchema);
+

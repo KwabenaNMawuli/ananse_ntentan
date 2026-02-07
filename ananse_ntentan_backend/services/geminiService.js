@@ -9,6 +9,22 @@ class GeminiService {
     });
   }
 
+  /**
+   * Simple text generation without parsing
+   * @param {string} prompt - The prompt to send
+   * @returns {string} - Raw text response
+   */
+  async generateText(prompt) {
+    try {
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
+    } catch (error) {
+      console.error('Gemini text generation error:', error);
+      throw error;
+    }
+  }
+
   async generateStory(userContent, promptTemplate, visualStyle) {
     try {
       // Assemble prompt with style modifiers
