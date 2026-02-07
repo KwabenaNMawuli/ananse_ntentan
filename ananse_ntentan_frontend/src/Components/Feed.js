@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import './Feed.css';
 
@@ -13,11 +13,7 @@ const Feed = () => {
   const apiRoot = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const apiBase = apiRoot.endsWith('/api') ? apiRoot : `${apiRoot.replace(/\/+$/, '')}/api`;
 
-  useEffect(() => {
-    fetchStories(1, true);
-  }, []);
-
-  const fetchStories = async (nextPage = 1, replace = false) => {
+  const fetchStories = useCallback(async (nextPage = 1, replace = false) => {
     try {
       if (replace) {
         setLoading(true);
@@ -42,7 +38,12 @@ const Feed = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [apiBase]);
+
+  useEffect(() => {
+    fetchStories(1, true);
+  }, [fetchStories]);
+
 
   if (loading) return <div className="feed-container"><p className="loading-text">Receiving Transmissions...</p></div>;
   if (error) return <div className="feed-container"><p className="error-text">{error}</p></div>;
