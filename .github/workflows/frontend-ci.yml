@@ -202,6 +202,7 @@ jobs:
         echo "✅ Production deployment complete!"
         
     - name: Create deployment notification
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
