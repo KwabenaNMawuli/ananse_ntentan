@@ -17,7 +17,6 @@ const HomePage = () => {
 
   // Recording States
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
 
@@ -239,14 +238,11 @@ const HomePage = () => {
       formData.append('userProfile', JSON.stringify(preferences));
     }
 
-    let endpoint = '';
-
     try {
       let response;
       
       if (activeTab === 'write') {
         if (!writeText.trim()) throw new Error("The void demands words.");
-        endpoint = '/write';
         
         // Get user preferences
         const modifiers = getPromptModifiers();
@@ -269,7 +265,6 @@ const HomePage = () => {
         
       } else if (activeTab === 'speak') {
         if (!audioBlob) throw new Error("No echo recorded.");
-        endpoint = '/speak';
         formData.append('audio', audioBlob, 'recording.webm');
         
         response = await fetch(`${apiBase}/stories/speak`, {
@@ -279,7 +274,6 @@ const HomePage = () => {
 
       } else if (activeTab === 'sketch') {
         if (!selectedImage) throw new Error("No visual artifact provided.");
-        endpoint = '/sketch';
         formData.append('image', selectedImage);
 
         response = await fetch(`${apiBase}/stories/sketch`, {
