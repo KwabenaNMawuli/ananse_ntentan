@@ -5,20 +5,12 @@ const chatRoomSchema = new mongoose.Schema({
     type: String,
     required: true
   }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
   active: {
     type: Boolean,
     default: true
   }
 }, {
-  timestamps: true
+  timestamps: true  // Auto-manages createdAt and updatedAt
 });
 
 // Virtual populate messages
@@ -29,11 +21,10 @@ chatRoomSchema.virtual('messages', {
 });
 
 // Ensure participants array has exactly 2 members
-chatRoomSchema.pre('save', function(next) {
+// Using modern async pattern - throw error instead of next()
+chatRoomSchema.pre('save', function() {
   if (this.participants.length !== 2) {
-    next(new Error('Chat room must have exactly 2 participants'));
-  } else {
-    next();
+    throw new Error('Chat room must have exactly 2 participants');
   }
 });
 

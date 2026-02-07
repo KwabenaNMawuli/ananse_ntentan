@@ -65,8 +65,20 @@ wss.on('connection', (ws) => {
           if (data.matchType === 'random') {
             // Check if user already in queue
             if (waitingQueue.includes(userId)) {
+              ws.send(JSON.stringify({
+                type: 'already_searching',
+                message: 'You are already searching for a wanderer...'
+              }));
               break;
             }
+            
+            // Clean up disconnected users from queue first
+            const activeQueue = waitingQueue.filter(queuedUserId => {
+              const queuedWs = clients.get(queuedUserId);
+              return queuedWs && queuedWs.readyState === WebSocket.OPEN;
+            });
+            waitingQueue.length = 0;
+            waitingQueue.push(...activeQueue);
             
             // Try to match with someone in queue
             if (waitingQueue.length > 0) {
@@ -95,13 +107,24 @@ wss.on('connection', (ws) => {
                 
                 console.log(`Match created: ${userId} <-> ${partnerId}`);
               } else {
-                // Partner disconnected, add current user to queue
+                // Partner disconnected, notify current user they're now waiting
                 waitingQueue.push(userId);
+                ws.send(JSON.stringify({
+                  type: 'waiting',
+                  message: 'No other wanderers online. Waiting for someone to join...',
+                  position: 1
+                }));
+                console.log(`User ${userId} added to waiting queue (partner was disconnected)`);
               }
             } else {
-              // Add to waiting queue
+              // No one in queue - add user and notify they're waiting
               waitingQueue.push(userId);
-              console.log(`User ${userId} added to waiting queue`);
+              ws.send(JSON.stringify({
+                type: 'waiting',
+                message: 'No other wanderers online. Waiting for someone to join...',
+                position: 1
+              }));
+              console.log(`User ${userId} added to waiting queue (first in queue)`);
             }
           }
           break;
