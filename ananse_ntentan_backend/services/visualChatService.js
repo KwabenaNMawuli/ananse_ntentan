@@ -2,14 +2,14 @@ const GeminiService = require('./geminiService');
 const imageService = require('./imageService');
 const mongoose = require('mongoose');
 
-// GridFS for image storage
+// GridFS for image storage - use same bucket as fileService for compatibility
 let gfsBucket;
 
 // Initialize GridFS bucket
 const initGridFS = () => {
   if (!gfsBucket && mongoose.connection.readyState === 1) {
     gfsBucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
-      bucketName: 'chatImages'
+      bucketName: 'uploads'  // Use 'uploads' to match fileService bucket
     });
   }
   return gfsBucket;
