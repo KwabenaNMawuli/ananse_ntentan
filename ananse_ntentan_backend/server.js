@@ -9,7 +9,15 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const ChatRoom = require('./models/ChatRoom');
 const ChatMessage = require('./models/ChatMessage');
-const visualChatService = require('./services/visualChatService');
+
+// Lazy load visual chat service to avoid blocking startup
+let visualChatService = null;
+const getVisualChatService = () => {
+  if (!visualChatService) {
+    visualChatService = require('./services/visualChatService');
+  }
+  return visualChatService;
+};
 
 const app = express();
 const server = http.createServer(app);
@@ -169,7 +177,7 @@ wss.on('connection', (ws) => {
           
           try {
             // Check daily limit
-            const limitCheck = await visualChatService.checkDailyLimit(userId);
+            const limitCheck = await getVisualChatService().checkDailyLimit(userId);
             if (!limitCheck.allowed) {
               ws.send(JSON.stringify({
                 type: 'visual_limit_reached',
@@ -199,7 +207,7 @@ wss.on('connection', (ws) => {
             await visualMessage.save();
             
             // Generate visual story (async)
-            const visualData = await visualChatService.processVisualMessage(
+            const visualData = await getVisualChatService().processVisualMessage(
               visualContent, 
               panelCount || 3
             );
