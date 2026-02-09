@@ -6,7 +6,6 @@ const geminiService = require('../services/geminiService');
 const audioService = require('../services/audioService');
 const fileService = require('../services/fileService');
 const imageService = require('../services/imageService');
-const videoService = require('../services/videoService');
 
 class StoryController {
   // POST /api/stories/write
@@ -226,8 +225,10 @@ class StoryController {
             'originalContent.transcription': description // Reusing transcription field for description text
         });
 
-        // Hand off to main text processing
-        await this.processStory(storyId, description, visualStyleId, audioStyleId);
+        // Hand off to main text processing with multimodal input for deep sensing
+        // The image is passed so Gemini can "see" the artistic style and apply it
+        const multimodalInput = { buffer: imageBuffer, mimeType: mimeType };
+        await this.processStory(storyId, description, visualStyleId, audioStyleId, multimodalInput);
 
     } catch (error) {
         console.error(`❌ Sketch processing failed for ${storyId}:`, error);
@@ -239,13 +240,13 @@ class StoryController {
     }
   }
 
-  async processSpeakStory(storyId, audioBuffer, visualStyleId, audioStyleId) {
+  async processSpeakStory(storyId, audioBuffer, mimeType, visualStyleId, audioStyleId) {
     const startTime = Date.now();
     try {
         await Story.findByIdAndUpdate(storyId, { status: 'processing' });
         console.log(`🎙️ Transcribing audio for story ${storyId}...`);
 
-        const transcription = await geminiService.transcribeAudio(audioBuffer);
+        const transcription = await geminiService.transcribeAudio(audioBuffer, mimeType);
         console.log(`✅ Transcription complete: "${transcription.substring(0, 50)}..."`);
 
         // Update story with transcription
@@ -254,9 +255,10 @@ class StoryController {
             'originalContent.transcription': transcription
         });
 
-        // Hand off to main text processing
-        // Note: processStory handles its own status updates and error handling
-        await this.processStory(storyId, transcription, visualStyleId, audioStyleId);
+        // Hand off to main text processing with multimodal input for deep sensing
+        // The audio is passed so Gemini can "hear" the tone/emotion, not just the text
+        const multimodalInput = { buffer: audioBuffer, mimeType: mimeType };
+        await this.processStory(storyId, transcription, visualStyleId, audioStyleId, multimodalInput);
 
     } catch (error) {
         console.error(`❌ Speak processing failed for ${storyId}:`, error);
@@ -268,7 +270,7 @@ class StoryController {
     }
   }
 
-  async processStory(storyId, text, visualStyleId, audioStyleId) {
+  async processStory(storyId, text, visualStyleId, audioStyleId, multimodalInput = null) {
     const startTime = Date.now();
 
     try {
@@ -291,13 +293,23 @@ class StoryController {
         visualStyle = await ArtisticStyle.findById(visualStyleId);
       }
 
-      // 3. Generate story with Gemini
+      // 3. Generate story with Gemini (with optional multimodal input for deep sensing)
       console.log('Generating story with Gemini...');
-      const storyData = await geminiService.generateStory(
+      const result = await geminiService.generateStory(
         text,
         promptTemplate,
-        visualStyle
+        visualStyle,
+        multimodalInput,
+        { thinkingLevel: 'HIGH' }
       );
+
+      // The new service returns { story, thoughtSignature }
+      const storyData = result.story || result;
+      const thoughtSignature = result.thoughtSignature || null;
+      
+      if (thoughtSignature) {
+        console.log('💭 Thought signature captured for future continuity');
+      }
 
       // 4. Extract narration script
       const narrationScript = storyData.narration || 
@@ -359,87 +371,12 @@ class StoryController {
         }
       }
 
-      // 9. Generate video from panels (NEW)
-      let videoFileId = null;
-      let videoDuration = 0;
-      const enableVideoGeneration = process.env.ENABLE_VIDEO_GENERATION === 'true';
-      const videoProbabilityRaw = parseFloat(process.env.VIDEO_GENERATION_PROBABILITY || '0.25');
-      const videoProbability = Number.isFinite(videoProbabilityRaw)
-        ? Math.min(Math.max(videoProbabilityRaw, 0), 1)
-        : 0.25;
-      const shouldGenerateVideo = Math.random() < videoProbability;
-      const hasPanelImages = panelImageFileIds.filter(id => id).length > 0;
-      
-      if (enableVideoGeneration && hasPanelImages && shouldGenerateVideo) {
-        try {
-          console.log('🎬 Generating animated video from panels...');
-          
-          let imageBuffersForVideo = [];
-
-          // Optionally regenerate images for video using a different model
-          if (process.env.VIDEO_IMAGE_MODEL) {
-            try {
-              const videoImageBuffers = await imageService.generateAllPanelImages(
-                storyData.panels,
-                visualStyle,
-                { model: process.env.VIDEO_IMAGE_MODEL }
-              );
-              imageBuffersForVideo = videoImageBuffers.filter(buffer => buffer);
-              console.log(`✅ Generated ${imageBuffersForVideo.length} video-specific panel images`);
-            } catch (error) {
-              console.error('⚠️ Video image generation failed, falling back to stored panels:', error.message);
-            }
-          }
-
-          // Fallback: Get image buffers back from GridFS for video processing
-          if (imageBuffersForVideo.length === 0) {
-            for (const fileId of panelImageFileIds) {
-              if (fileId) {
-                const buffer = await fileService.downloadFile(fileId);
-                imageBuffersForVideo.push(buffer);
-              }
-            }
-          }
-
-          if (imageBuffersForVideo.length === 0) {
-            throw new Error('No images available for video generation');
-          }
-
-          // Generate video
-          const videoBuffer = await videoService.generateStoryVideo(
-            imageBuffersForVideo,
-            null, // audioBuffer (null for now since audio generation is disabled)
-            null, // videoStyle (can be passed from request in future)
-            storyData
-          );
-
-          // Upload video to GridFS
-          videoFileId = await fileService.uploadFile(
-            videoBuffer,
-            `story-${storyId}-video.mp4`,
-            { storyId, type: 'story-video' }
-          );
-
-          // Get video duration
-          videoDuration = await videoService.getVideoDuration(videoBuffer);
-          
-          console.log(`✅ Video generated and stored (${videoDuration.toFixed(1)}s)`);
-        } catch (error) {
-          console.error('⚠️ Video generation failed, continuing without video:', error.message);
-        }
-      }
-      else if (enableVideoGeneration && hasPanelImages && !shouldGenerateVideo) {
-        console.log('🎬 Video generation skipped by probability setting');
-      }
-
-      // 10. Update story with complete data
+      // 9. Update story with complete data
       const processingTime = Date.now() - startTime;
       await Story.findByIdAndUpdate(storyId, {
         visualNarrative: {
           panels: storyData.panels || [],
-          style: visualStyle?.name || 'default',
-          videoFileId,
-          videoDuration
+          style: visualStyle?.name || 'default'
         },
         audioNarrative: {
           script: narrationScript,

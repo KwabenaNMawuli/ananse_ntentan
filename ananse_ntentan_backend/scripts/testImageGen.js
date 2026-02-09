@@ -1,36 +1,44 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const genaiClient = require('../services/genaiClient');
 const fs = require('fs');
 
 async function testImageGen() {
-  console.log('Testing Image Generation with nano-banana-pro-preview...');
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  console.log('Testing Image Generation with new SDK...');
   
-  // Note: specific syntax for image generation models might vary. 
-  // Attempting standard generateContent likely won't return an image for a text model like Gemini.
-  // But if 'nano-banana' is an image model, we check how to invoke it.
-  // In many Google SDKs, image gen is separate. 
-  // However, often specialized models are invoked via tool use or specific methods.
-  // Let's try to assume it behaves like an image generation model where .generateImage might exist 
-  // OR we pass specific params to generateContent.
+  // Note: Image generation in the new SDK uses specific image models
+  // This test verifies the SDK can communicate with image generation endpoints
   
-  // Let's try simple generateContent prompt first, maybe it returns an image blob?
   try {
-     const model = genAI.getGenerativeModel({ model: 'nano-banana-pro-preview' });
-     
-     // 1. Try standard text prompt asking for image
-     // Some setups use generateContent and return inlineData.
-     console.log("Attempting generation...");
-     const result = await model.generateContent("A majestic cybernetic spider, neon colors, digital art style");
-     const response = await result.response;
-     
-     // Check for images in the response
-     // Usually specific fields on the response object
-     console.log("Response candidates:", JSON.stringify(response.candidates, null, 2));
+    const model = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+    
+    console.log(`Attempting image generation with model: ${model}...`);
+    
+    const response = await genaiClient.models.generateContent({
+      model: model,
+      contents: [{ 
+        parts: [{ text: 'A majestic cybernetic spider, neon colors, digital art style' }] 
+      }],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        imageConfig: { aspectRatio: '1:1' }
+      }
+    });
+    
+    // Check for images in the response
+    const parts = response.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find(part => part.inlineData && part.inlineData.data);
+    
+    if (imagePart) {
+      console.log('✅ Image generation successful!');
+      console.log(`   MIME type: ${imagePart.inlineData.mimeType}`);
+      console.log(`   Data length: ${imagePart.inlineData.data.length} bytes`);
+    } else {
+      console.log('Response parts:', JSON.stringify(parts, null, 2));
+    }
      
   } catch (e) {
-      console.error("Standard generation failed:", e.message);
+    console.error('Image generation failed:', e.message);
   }
 }
 

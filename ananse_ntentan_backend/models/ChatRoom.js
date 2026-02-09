@@ -8,6 +8,16 @@ const chatRoomSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  // Stores the AI's reasoning state for multi-turn story continuity
+  thoughtSignature: {
+    type: String,
+    default: null
+  },
+  // Stores story context for the room (character names, plot points, etc.)
+  storyContext: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true  // Auto-manages createdAt and updatedAt

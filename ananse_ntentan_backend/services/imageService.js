@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const genaiClient = require('./genaiClient');
 
 /**
  * ImageService - Handles image generation for story panels
@@ -15,10 +15,7 @@ class ImageService {
     this.stabilityToken = process.env.STABILITY_API_KEY;
     this.geminiApiKey = process.env.GEMINI_API_KEY;
     
-    // Initialize Google AI if using Imagen
-    if (this.provider === 'imagen') {
-      this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    }
+    // genaiClient is already initialized with API key
   }
 
   /**

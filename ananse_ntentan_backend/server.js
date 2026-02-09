@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const http = require('http');
 const WebSocket = require('ws');
-// const mongoSanitize = require('express-mongo-sanitize'); // Disabled - Express 5 compatibility issue
+
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const ChatRoom = require('./models/ChatRoom');
@@ -17,6 +17,15 @@ const getVisualChatService = () => {
     visualChatService = require('./services/visualChatService');
   }
   return visualChatService;
+};
+
+// Lazy load chat AI service for thought signature continuity
+let chatAIService = null;
+const getChatAIService = () => {
+  if (!chatAIService) {
+    chatAIService = require('./services/chatAIService');
+  }
+  return chatAIService;
 };
 
 const app = express();
@@ -32,7 +41,7 @@ app.use(helmet({
 app.use(cors({ origin: process.env.FRONTEND_URL }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// app.use(mongoSanitize()); // Disabled - Express 5 compatibility issue
+
 
 // Routes
 app.use('/api/stories', require('./routes/stories'));
@@ -260,6 +269,123 @@ wss.on('connection', (ws) => {
               type: 'visual_error',
               message: 'Failed to generate visual story. Please try again.',
               error: error.message
+            }));
+          }
+          break;
+          
+        case 'start_ai_story':
+          // Start a new collaborative story with AI
+          const { roomId: storyRoomId, prompt: storyPrompt } = data;
+          
+          try {
+            ws.send(JSON.stringify({
+              type: 'ai_thinking',
+              message: 'Ananse is weaving the beginning of your story...'
+            }));
+            
+            const storyResult = await getChatAIService().startStory(storyRoomId, storyPrompt);
+            
+            // Save AI message to database
+            const aiStoryMessage = new ChatMessage({
+              roomId: storyRoomId,
+              senderId: 'AI',
+              content: storyResult.response,
+              type: 'ai_story'
+            });
+            await aiStoryMessage.save();
+            
+            // Send to user
+            ws.send(JSON.stringify({
+              type: 'ai_story_response',
+              roomId: storyRoomId,
+              content: storyResult.response,
+              hasThoughtSignature: !!storyResult.thoughtSignature,
+              timestamp: aiStoryMessage.createdAt
+            }));
+            
+            console.log(`📖 AI story started in room ${storyRoomId}`);
+          } catch (error) {
+            console.error('AI story start error:', error);
+            ws.send(JSON.stringify({
+              type: 'ai_error',
+              message: 'Failed to start story. Please try again.'
+            }));
+          }
+          break;
+          
+        case 'send_ai_message':
+          // Continue collaborative story with AI
+          const { roomId: aiRoomId, content: aiContent } = data;
+          
+          try {
+            // Save user message first
+            const userAiMessage = new ChatMessage({
+              roomId: aiRoomId,
+              senderId: userId,
+              content: aiContent,
+              type: 'text'
+            });
+            await userAiMessage.save();
+            
+            ws.send(JSON.stringify({
+              type: 'ai_thinking',
+              message: 'Ananse is contemplating the story...'
+            }));
+            
+            const aiResult = await getChatAIService().generateChatResponse(aiRoomId, aiContent);
+            
+            // Save AI response
+            const aiResponseMessage = new ChatMessage({
+              roomId: aiRoomId,
+              senderId: 'AI',
+              content: aiResult.response,
+              type: 'ai_story'
+            });
+            await aiResponseMessage.save();
+            
+            // Update room timestamp
+            await ChatRoom.findByIdAndUpdate(aiRoomId, { updatedAt: new Date() });
+            
+            // Send to user
+            ws.send(JSON.stringify({
+              type: 'ai_story_response',
+              roomId: aiRoomId,
+              content: aiResult.response,
+              hasThoughtSignature: !!aiResult.thoughtSignature,
+              timestamp: aiResponseMessage.createdAt
+            }));
+            
+            // Also notify the other participant if present
+            const aiRoom = await ChatRoom.findById(aiRoomId);
+            if (aiRoom) {
+              const otherParticipant = aiRoom.participants.find(p => p !== userId);
+              const otherWs = clients.get(otherParticipant);
+              
+              if (otherWs && otherWs.readyState === WebSocket.OPEN) {
+                // Send user's message
+                otherWs.send(JSON.stringify({
+                  type: 'message',
+                  roomId: aiRoomId,
+                  senderId: userId,
+                  content: aiContent,
+                  timestamp: userAiMessage.createdAt
+                }));
+                // Send AI response
+                otherWs.send(JSON.stringify({
+                  type: 'ai_story_response',
+                  roomId: aiRoomId,
+                  content: aiResult.response,
+                  timestamp: aiResponseMessage.createdAt
+                }));
+              }
+            }
+            
+            console.log(`💬 AI story continued in room ${aiRoomId}`);
+          } catch (error) {
+            console.error('AI chat error:', error);
+            ws.send(JSON.stringify({
+              type: 'ai_error',
+              message: 'Ananse lost the thread of the story. Please try again.'
             }));
           }
           break;
