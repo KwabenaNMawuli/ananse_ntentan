@@ -20,7 +20,7 @@
     "@google/generative-ai": "^0.24.1",
     "@huggingface/inference": "^4.13.11",
     "@langchain/google-genai": "^2.1.14",
-    "axios": "^1.6.7",
+    "axios": "^1.13.5",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
